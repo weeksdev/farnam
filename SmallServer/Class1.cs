@@ -14,6 +14,8 @@ namespace SmallServer
 
     public class Server
     {
+
+
         [DllImport("urlmon.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = false)]
         static extern int FindMimeFromData(IntPtr pBC,
               [MarshalAs(UnmanagedType.LPWStr)] string pwzUrl,
@@ -58,6 +60,23 @@ namespace SmallServer
             set { _prefixes = value; }
         }
         
+		public List<Lookup> LookUps = new List<Lookup>();
+
+		public class Lookup
+		{
+			public string url {
+				get;
+				set;
+			}
+			public Action callback {
+				get;
+				set;
+			}
+			public string httpMethod {
+				get;
+				set;
+			}
+		}
         /// <summary>
         /// Method to start listening to the requested prefix
         /// </summary>
@@ -69,32 +88,66 @@ namespace SmallServer
                 this.Listener.Prefixes.Add(prefix);
                 Console.WriteLine("Listening for requests on {0}", prefix);
             }
+
             this.Listener.Start();
 
-            while (true)
-            {
-                //Set the current context to the listener context.
-                this.Context = this.Listener.GetContext();
-                //Get the page requested.
-                string page = this.Context.Request.Url.LocalPath;
-                //Get any query parameters that were passed along (get)
-                string query = this.Context.Request.Url.Query.Replace("?", "");
-                Console.WriteLine("Received request for {0}?{1}", page, query);
+			while (true) {
+				//Set the current context to the listener context.
+				this.Context = this.Listener.GetContext ();
+				//Get the page requested.
+				string page = this.Context.Request.Url.LocalPath;
+				//Get any query parameters that were passed along (get)
+				string query = this.Context.Request.Url.Query.Replace ("?", "");
+				Console.WriteLine ("Received request for {0}?{1}", page, query);
+				//bool callbackFound = false;
 
-                //read anything that was included in the body (ie json)
-                StreamReader inputStream = new StreamReader(this.Context.Request.InputStream);
-                string bodyData = inputStream.ReadToEnd();
+				//look up any special url's that the user wants special action taken.
+				foreach (var lookUp in LookUps) {
+					string pathAndQuery = Context.Request.Url.PathAndQuery.ToString ();
+					Console.WriteLine (pathAndQuery);
+					var restParamaters = System.Text.RegularExpressions.Regex.Matches (lookUp.url, @"\/\{(.*?[^{}])\}");
+					string compareUrl = lookUp.url;
+					foreach (System.Text.RegularExpressions.Match match in restParamaters) {
+						compareUrl = compareUrl.Replace (match.Value, @"\/(.*?)");
+					}
+					var urlMatch = System.Text.RegularExpressions.Regex.Match (lookUp.url, compareUrl);
+					if (urlMatch.Value != null && urlMatch.Value != "") {
+						lookUp.callback ();
+						//callbackFound = true;
+						return;
+					}
+				}
 
-                //write response headers
-                this.Context.Response.Headers.Add("SmallServer","1.0");
+				//if (!callbackFound) {
+				//read anything that was included in the body (ie json)
+				StreamReader inputStream = new StreamReader (this.Context.Request.InputStream);
+				string bodyData = inputStream.ReadToEnd ();
 
-                //write output response
-                var fileBytes = this.GetFile(page);
-                this.Context.Response.OutputStream.Write(fileBytes,0,fileBytes.Length);
-                this.Context.Response.OutputStream.Flush();
-                this.Context.Response.Close();
-            } 
+				//write response headers
+				this.Context.Response.Headers.Add ("SmallServer", "1.0");
+
+				//write output response
+				var fileBytes = this.GetFile (page);
+				this.Context.Response.OutputStream.Write (fileBytes, 0, fileBytes.Length);
+				this.Context.Response.OutputStream.Flush ();
+				this.Context.Response.Close ();
+				
+			} 
         }
+
+		public void Write(string text, string mimeType = "application/text"){
+			//byte[] bytes = new byte[text.Length * sizeof(char)];
+			var bytes = System.Text.Encoding.UTF8.GetBytes (text);
+			this.Context.Response.Headers.Add ("Content-Type", mimeType);
+			this.Context.Response.OutputStream.Write (bytes, 0, bytes.Length);
+			this.Context.Response.OutputStream.Flush ();
+			this.Context.Response.Close ();
+		}
+
+		public void WriteJson(object obj){
+			var str = Newtonsoft.Json.JsonConvert.SerializeObject (obj);
+			Write (str,"application/json");
+		}
 
         private byte[] GetFile(string localPath)
         {
@@ -103,10 +156,10 @@ namespace SmallServer
             Console.WriteLine("Fufilling Request...");
             try
             {
-                this.Context.Response.Headers.Add("Content-Type", getMimeFromFile(this.PhysicalPath + localPath));
+                //this.Context.Response.Headers.Add("Content-Type", getMimeFromFile(this.PhysicalPath + localPath));
                 return System.IO.File.ReadAllBytes(this.PhysicalPath + localPath);
             }
-            catch 
+            catch(Exception ex)
             {
                 Console.WriteLine("Error Occured With Request For:{0}", localPath);
                 return System.Text.Encoding.UTF8.GetBytes("<html><head></head><body>Small Server <br/> Sorry, Error Occured. <br/> :(</body></html>");

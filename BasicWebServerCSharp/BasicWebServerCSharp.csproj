@@ -11,6 +11,8 @@
     <AssemblyName>BasicWebServerCSharp</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <ProductVersion>12.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -45,13 +47,15 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqlConnector.cs" />
+    <Compile Include="ConnectionBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SmallServer\SmallServer.csproj">
-      <Project>{8fde64f6-67cd-44ae-92e4-e6d10e7753cb}</Project>
+      <Project>{8FDE64F6-67CD-44AE-92E4-E6D10E7753CB}</Project>
       <Name>SmallServer</Name>
     </ProjectReference>
   </ItemGroup>
