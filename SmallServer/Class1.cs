@@ -77,6 +77,13 @@ namespace SmallServer
 				set;
 			}
 		}
+		public string RequestBody {
+			get {
+				return new StreamReader(this.Context.Request.InputStream).ReadToEnd ();
+			}
+		}
+		Dictionary<string,string> UrlParameters = new Dictionary<string, string>();
+
         /// <summary>
         /// Method to start listening to the requested prefix
         /// </summary>
@@ -92,6 +99,7 @@ namespace SmallServer
             this.Listener.Start();
 
 			while (true) {
+				this.UrlParameters = new Dictionary<string, string> ();//refresh the url parameters variable
 				//Set the current context to the listener context.
 				this.Context = this.Listener.GetContext ();
 				//Get the page requested.
@@ -99,7 +107,7 @@ namespace SmallServer
 				//Get any query parameters that were passed along (get)
 				string query = this.Context.Request.Url.Query.Replace ("?", "");
 				Console.WriteLine ("Received request for {0}?{1}", page, query);
-				//bool callbackFound = false;
+				bool callbackFound = false;
 
 				//look up any special url's that the user wants special action taken.
 				foreach (var lookUp in LookUps) {
@@ -110,28 +118,27 @@ namespace SmallServer
 					foreach (System.Text.RegularExpressions.Match match in restParamaters) {
 						compareUrl = compareUrl.Replace (match.Value, @"\/(.*?)");
 					}
-					var urlMatch = System.Text.RegularExpressions.Regex.Match (lookUp.url, compareUrl);
-					if (urlMatch.Value != null && urlMatch.Value != "") {
+					var urlMatch = System.Text.RegularExpressions.Regex.Match (pathAndQuery, compareUrl);
+					if (urlMatch.Value != null && urlMatch.Value != "" && lookUp.httpMethod.ToLower() == this.Context.Request.HttpMethod.ToLower()) {
 						lookUp.callback ();
-						//callbackFound = true;
-						return;
+						callbackFound = true;
+						break;
 					}
 				}
 
-				//if (!callbackFound) {
-				//read anything that was included in the body (ie json)
-				StreamReader inputStream = new StreamReader (this.Context.Request.InputStream);
-				string bodyData = inputStream.ReadToEnd ();
+				if (!callbackFound) {
+					//read anything that was included in the body (ie json)
+					StreamReader inputStream = new StreamReader (this.Context.Request.InputStream);
 
-				//write response headers
-				this.Context.Response.Headers.Add ("SmallServer", "1.0");
+					//write response headers
+					this.Context.Response.Headers.Add ("SmallServer", "1.0");
 
-				//write output response
-				var fileBytes = this.GetFile (page);
-				this.Context.Response.OutputStream.Write (fileBytes, 0, fileBytes.Length);
-				this.Context.Response.OutputStream.Flush ();
-				this.Context.Response.Close ();
-				
+					//write output response
+					var fileBytes = this.GetFile (page);
+					this.Context.Response.OutputStream.Write (fileBytes, 0, fileBytes.Length);
+					this.Context.Response.OutputStream.Flush ();
+					this.Context.Response.Close ();
+				}
 			} 
         }
 

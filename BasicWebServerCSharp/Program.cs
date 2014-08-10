@@ -15,22 +15,34 @@ namespace BasicWebServerCSharp
             server.PhysicalPath = @"/home/weeksdev/";
             server.Prefixes.Add("http://localhost:" + port + "/");
 			server.LookUps.Add (new SmallServer.Server.Lookup () {
-				url = "Connection/{ConnectionName}/Query",
+				url = "rest/v1/Connection/{ConnectionName}/Query",
 				callback = delegate(){
 					server.WriteJson(new { FirstName ="Andrew"});
-				}
+				},
+				httpMethod = "post"
 			});
 			server.LookUps.Add (new SmallServer.Server.Lookup () {
-				url = "Connection/{ConnectionName}/Tables",
-				callback = GetTables
+				url = "rest/v1/Connection/{ConnectionName}/Tables",
+				callback = GetTables,
+				httpMethod = "get"
 			});
 			server.LookUps.Add (new SmallServer.Server.Lookup () {
-				url = "Connection/{ConnectionName}/Table/{TableName}/Columns",
-				callback = GetColumns
+				url = "rest/v1/Connection/{ConnectionName}/Table/{TableName}/Columns",
+				callback = GetColumns,
+				httpMethod = "get"
+			});
+			server.LookUps.Add (new SmallServer.Server.Lookup () {
+				url = "rest/v1/Another/Test",
+				callback = AnotherTest,
+				httpMethod = "get"
 			});
             server.Start();
         }
         
+		static void AnotherTest(){
+			server.WriteJson (new {test="AnotherTest"});
+		}
+
 		static void Query(){
 			ConnectionBase sqlBase = new ConnectionBase (connectionString);
 			sqlBase.ExecuteSql (server.Context.Request.QueryString ["sql"]);
