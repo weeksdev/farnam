@@ -43,7 +43,7 @@ namespace SmallServer
             set { _context = value; }
         }
 
-        private string _physicalpath = "C:/";
+		private string _physicalpath = HttpRuntime.AppDomainAppPath;
 
         public string PhysicalPath
         {
@@ -88,6 +88,10 @@ namespace SmallServer
         /// Method to start listening to the requested prefix
         /// </summary>
         public void Start() {
+
+			Console.WriteLine (new System.IO.DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent);
+			Console.WriteLine (HostingEnvironment.MapPath("/"));
+			Console.WriteLine (HttpRuntime.AppDomainAppVirtualPath);
             Console.WriteLine("Small Server Starting...");
             Console.WriteLine("Adding Prefixes...");
             foreach (var prefix in this.Prefixes)
